@@ -22,10 +22,10 @@ export const WhoItsFor: React.FC = () => {
           </div>
 
           {/* Right Side: Bento Grid */}
-          <div className="grid grid-cols-2 gap-4 h-[600px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-auto md:h-[600px]">
             
             {/* Tall Card (Left) */}
-            <div className="row-span-2 relative rounded-[2rem] overflow-hidden group cursor-pointer">
+            <div className="md:row-span-2 relative rounded-[2rem] overflow-hidden group cursor-pointer h-[400px] md:h-auto">
               <img 
                 src="/Maeva.jpg" 
                 alt="Connection" 
@@ -41,7 +41,7 @@ export const WhoItsFor: React.FC = () => {
             </div>
 
             {/* Top Small Card (Right) */}
-            <div className="relative rounded-[2rem] overflow-hidden group cursor-pointer">
+            <div className="relative rounded-[2rem] overflow-hidden group cursor-pointer h-[300px] md:h-auto">
               <img 
                 src="/Tom.thedad.jpg" 
                 alt="Substance" 
@@ -57,7 +57,7 @@ export const WhoItsFor: React.FC = () => {
             </div>
 
             {/* Bottom Small Card (Right) */}
-            <div className="relative rounded-[2rem] overflow-hidden group cursor-pointer">
+            <div className="relative rounded-[2rem] overflow-hidden group cursor-pointer h-[300px] md:h-auto">
               <img 
                 src="/Bella.jpg" 
                 alt="Real Life" 
