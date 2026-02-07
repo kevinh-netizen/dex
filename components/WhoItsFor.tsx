@@ -16,9 +16,6 @@ export const WhoItsFor: React.FC = () => {
             <p className="text-stone-500 text-lg md:text-xl font-light leading-relaxed">
               We value creators who prioritize the tactile experience of discovery over the dopamine loop of digital performance. Discover what we are doing to achieve our mission responsibly.
             </p>
-            <button className="px-8 py-4 rounded-full border border-stone-200 text-xs font-bold tracking-[0.2em] uppercase hover:bg-stone-900 hover:text-white transition-all duration-300">
-              Read More
-            </button>
           </div>
 
           {/* Right Side: Bento Grid */}

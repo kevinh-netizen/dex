@@ -52,7 +52,7 @@ export const Footer: React.FC = () => {
 
           {/* Copyright */}
           <div className="flex flex-col gap-2 order-2 md:order-3 items-end">
-            <div className="flex flex-col items-start gap-2">
+            <div className="flex flex-row items-center gap-4">
               <div className="text-xs text-stone-500">© 2026, Worldex Labs, Inc</div>
               <a href="https://www.wapitee.io/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-stone-300 hover:text-stone-500 transition-colors">
                 <img src="/wapitee_lulu.jpg" alt="Wapitee Interactive" className="h-6 w-6 rounded-full object-cover" />

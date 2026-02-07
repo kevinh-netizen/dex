@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 
 interface CreatorData {
@@ -20,106 +19,34 @@ const creators: CreatorData[] = [
 ];
 
 export const Testimonials: React.FC<TestimonialsProps> = ({ onJoin }) => {
-  const [currentIndex, setCurrentIndex] = useState(creators.length);
-  const [isTransitioning, setIsTransitioning] = useState(true);
-  
-  // Dragging states
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
-  const extendedCreators = [...creators, ...creators, ...creators];
+  // Create a long list to simulate infinite scrolling
+  const displayCreators = [...creators, ...creators, ...creators, ...creators];
 
   // Auto-scroll effect
   useEffect(() => {
-    if (isDragging) return;
-
     const interval = setInterval(() => {
-      handleNext();
+      if (isDragging.current || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      const cardWidth = container.children[0]?.clientWidth || 0;
+      const gap = 20; // gap-5 = 1.25rem = 20px
+      const scrollAmount = cardWidth + gap;
+      
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      
+      // If we are near the end, scroll back to start
+      if (container.scrollLeft >= maxScroll - 10) {
+         container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+         container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [currentIndex, isDragging]);
-
-  const handleNext = () => {
-    if (currentIndex >= extendedCreators.length - creators.length) {
-      setIsTransitioning(false);
-      setCurrentIndex(creators.length);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsTransitioning(true);
-          setCurrentIndex(creators.length + 1);
-        });
-      });
-    } else {
-      setIsTransitioning(true);
-      setCurrentIndex((prev) => prev + 1);
-    }
-  };
-
-  const getCardWidthPercent = () => {
-    if (typeof window === 'undefined') return 20;
-    const width = window.innerWidth;
-    if (width < 768) return 100;
-    if (width < 1024) return 33.33;
-    return 20;
-  };
-
-  const handleStart = (clientX: number) => {
-    setIsDragging(true);
-    setStartX(clientX);
-    setDragOffset(0);
-    setIsTransitioning(false);
-  };
-
-  const handleMove = (clientX: number) => {
-    if (!isDragging) return;
-    const diff = clientX - startX;
-    setDragOffset(diff);
-  };
-
-  const handleEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    setIsTransitioning(true);
-    
-    // Calculate if we should snap to next/prev
-    const cardWidth = containerRef.current ? containerRef.current.offsetWidth / getVisibleItems() : 0;
-    const threshold = cardWidth * 0.3; // Drag 30% to snap
-
-    if (Math.abs(dragOffset) > threshold) {
-      if (dragOffset > 0) {
-        setCurrentIndex(prev => prev - 1);
-      } else {
-        setCurrentIndex(prev => prev + 1);
-      }
-    }
-    
-    setDragOffset(0);
-  };
-
-  const getVisibleItems = () => {
-    if (typeof window === 'undefined') return 5;
-    const width = window.innerWidth;
-    if (width < 768) return 1;
-    if (width < 1024) return 3;
-    return 5;
-  };
-
-  const calculateTranslateX = () => {
-    const cardWidthPercent = getCardWidthPercent();
-    const baseTranslate = -(currentIndex * cardWidthPercent);
-    
-    // While dragging, add the relative movement in percentage
-    if (isDragging && containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const dragPercent = (dragOffset / containerWidth) * 100;
-      return baseTranslate + dragPercent;
-    }
-    
-    return baseTranslate;
-  };
+  }, []);
 
   return (
     <section className="py-32 bg-white overflow-hidden select-none">
@@ -135,26 +62,17 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ onJoin }) => {
         </div>
 
         <div 
-          className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-          onMouseDown={(e) => handleStart(e.clientX)}
-          onMouseMove={(e) => handleMove(e.clientX)}
-          onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
-          onTouchStart={(e) => handleStart(e.touches[0].clientX)}
-          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
-          onTouchEnd={handleEnd}
+          ref={containerRef}
+          className="flex gap-5 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-8"
+          onTouchStart={() => { isDragging.current = true; }}
+          onTouchEnd={() => { setTimeout(() => isDragging.current = false, 2000); }}
+          onMouseEnter={() => { isDragging.current = true; }}
+          onMouseLeave={() => { isDragging.current = false; }}
         >
-          <div 
-            ref={containerRef}
-            className={`flex gap-5 ${isTransitioning ? 'transition-transform duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]' : ''}`}
-            style={{ 
-              transform: `translateX(calc(${calculateTranslateX()}%))` 
-            }}
-          >
-            {extendedCreators.map((creator, index) => (
+            {displayCreators.map((creator, index) => (
               <div 
                 key={index}
-                className="flex-shrink-0 w-full md:w-[calc(33.333%-14px)] lg:w-[calc(20%-16px)] aspect-[9/12] relative rounded-[2.5rem] overflow-hidden bg-stone-50 shadow-sm border border-stone-100 group select-none"
+                className="snap-center flex-shrink-0 w-full md:w-[calc(33.333%-14px)] lg:w-[calc(20%-16px)] aspect-[9/12] relative rounded-[2.5rem] overflow-hidden bg-stone-50 shadow-sm border border-stone-100 group select-none"
               >
                 {/* Image */}
                 <img 
@@ -180,10 +98,9 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ onJoin }) => {
                 </div>
               </div>
             ))}
-          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-10">
+        <div className="flex flex-row justify-center items-center gap-4 pt-10">
           <button 
             onClick={onJoin}
             className="px-8 py-3 bg-[#8B2FFC] text-white border border-[#8B2FFC] rounded-full font-medium hover:bg-[#7222cf] transition-colors shadow-sm hover:shadow-md"

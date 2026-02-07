@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -20,7 +19,7 @@ const StarIcon = ({ className }: { className?: string }) => (
 const ExperienceCard: React.FC<ExperienceCardProps & { image?: string; loading: boolean }> = ({ 
   handle, dotColor, title, description, image, loading, avatar
 }) => (
-  <div className="flex-shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] h-full select-none">
+  <div className="snap-center flex-shrink-0 w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] h-full select-none">
     <div className="bg-white rounded-[1.5rem] overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-all duration-300 group border border-stone-100">
       
       {/* Image Section - Top */}
@@ -72,12 +71,8 @@ export const Experience: React.FC = () => {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  
-  // Dragging states
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
   const cards: ExperienceCardProps[] = [
     {
@@ -122,72 +117,33 @@ export const Experience: React.FC = () => {
 
   // Automatic scrolling
   useEffect(() => {
-    if (isDragging) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => {
-        const visibleItems = getVisibleItems();
-        const maxIndex = Math.max(0, cards.length - visibleItems);
-        return prev >= maxIndex ? 0 : prev + 1;
-      });
-    }, 8000);
+      if (isDragging.current || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      const cardWidth = container.children[0]?.clientWidth || 0;
+      const gap = 24; // 1.5rem gap
+      const scrollAmount = cardWidth + gap;
+      
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      
+      // If we are near the end, scroll back to start
+      if (Math.abs(container.scrollLeft - maxScroll) < 10 || container.scrollLeft > maxScroll) {
+         container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+         container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }, 5000);
     return () => clearInterval(interval);
-  }, [cards.length, isDragging]);
+  }, []);
 
-  const getVisibleItems = () => {
-    if (typeof window === 'undefined') return 1;
-    const width = window.innerWidth;
-    if (width >= 1024) return 4;
-    if (width >= 640) return 2;
-    return 1;
-  };
-
-  const handleStart = (clientX: number) => {
-    setIsDragging(true);
-    setStartX(clientX);
-    setDragOffset(0);
-  };
-
-  const handleMove = (clientX: number) => {
-    if (!isDragging) return;
-    const diff = clientX - startX;
-    setDragOffset(diff);
-  };
-
-  const handleEnd = () => {
-    if (!isDragging) return;
-    
-    const containerWidth = containerRef.current?.offsetWidth || 1;
-    const itemWidth = containerWidth / getVisibleItems();
-    
-    // Calculate how many items we dragged across
-    const itemsMoved = dragOffset / itemWidth;
-    const threshold = 0.2; // Move 20% to trigger snap to next
-    
-    let newIndex = currentIndex;
-    if (itemsMoved < -threshold) newIndex += 1;
-    if (itemsMoved > threshold) newIndex -= 1;
-    
-    const maxIndex = Math.max(0, cards.length - getVisibleItems());
-    newIndex = Math.max(0, Math.min(newIndex, maxIndex));
-    
-    setCurrentIndex(newIndex);
-    setIsDragging(false);
-    setDragOffset(0);
-  };
-
-  const calculateTranslateX = () => {
-    const visibleItems = getVisibleItems();
-    const itemWidthPercent = 100 / visibleItems;
-    const baseTranslate = -(currentIndex * itemWidthPercent);
-    
-    // While dragging, add the relative movement in percentage
-    if (isDragging && containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const dragPercent = (dragOffset / containerWidth) * 100;
-      return baseTranslate + dragPercent;
-    }
-    
-    return baseTranslate;
+  const handleScroll = () => {
+      if (!containerRef.current) return;
+      const container = containerRef.current;
+      const cardWidth = container.children[0]?.clientWidth || 1;
+      const index = Math.round(container.scrollLeft / cardWidth);
+      const safeIndex = Math.min(Math.max(0, index), cards.length - 1);
+      setCurrentIndex(safeIndex);
   };
 
   return (
@@ -200,62 +156,47 @@ export const Experience: React.FC = () => {
           </p>
         </div>
 
+        {/* Carousel Container */}
         <div 
-          className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-          onMouseDown={(e) => handleStart(e.clientX)}
-          onMouseMove={(e) => handleMove(e.clientX)}
-          onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
-          onTouchStart={(e) => handleStart(e.touches[0].clientX)}
-          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
-          onTouchEnd={handleEnd}
-        >
-          <div 
             ref={containerRef}
-            className={`flex gap-6 ${isDragging ? 'transition-none' : 'transition-transform duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]'}`}
-            style={{ 
-              transform: `translateX(${calculateTranslateX()}%)`,
-              width: '100%' 
-            }}
-          >
-            {cards.map((card, idx) => (
-              <ExperienceCard 
-                key={idx} 
-                {...card} 
-                image={images[idx]} 
-                loading={loading} 
-              />
-            ))}
-          </div>
+            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-8 px-1"
+            onScroll={handleScroll}
+            onTouchStart={() => { isDragging.current = true; }}
+            onTouchEnd={() => { setTimeout(() => isDragging.current = false, 2000); }}
+            onMouseEnter={() => { isDragging.current = true; }}
+            onMouseLeave={() => { isDragging.current = false; }}
+        >
+          {cards.map((card, index) => (
+            <ExperienceCard
+              key={index}
+              {...card}
+              image={images[index]}
+              loading={loading}
+            />
+          ))}
+        </div>
 
-          <div className="mt-12 flex justify-center gap-3">
-            {cards.map((_, idx) => {
-              const visibleItems = getVisibleItems();
-              const maxIndex = Math.max(0, cards.length - visibleItems);
-              if (idx > maxIndex) return null;
-              
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`h-1.5 transition-all duration-700 rounded-full ${
-                    idx === currentIndex ? 'w-16 bg-stone-900' : 'w-4 bg-stone-200 hover:bg-stone-400'
-                  }`}
-                />
-              );
-            })}
-          </div>
-
-          <div className="flex justify-center mt-8">
-            <a 
-              href="https://www.dex.camera/products/dex" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-stone-900 text-white rounded-full font-medium hover:bg-stone-800 transition-colors shadow-sm hover:shadow-md"
-            >
-              Learn More
-            </a>
-          </div>
+        {/* Progress Indicators */}
+        <div className="flex justify-center gap-3">
+          {cards.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                  if (containerRef.current) {
+                      const cardWidth = containerRef.current.children[0]?.clientWidth || 0;
+                      const gap = 24;
+                      containerRef.current.scrollTo({
+                          left: index * (cardWidth + gap),
+                          behavior: 'smooth'
+                      });
+                  }
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                index === currentIndex ? 'w-8 bg-stone-800' : 'w-1.5 bg-stone-300 hover:bg-stone-400'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>
